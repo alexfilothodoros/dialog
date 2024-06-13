@@ -51,6 +51,9 @@ def test_load_csv(mocker, dbsession, csv_file: str):
 
     result = dbsession.query(load_csv.CompanyContent).all()
     assert len(result) == 2
+    assert len(mock_generate_embeddings.return_value[0]) == 1536
+    assert len(mock_generate_embeddings.return_value[1]) == 1536
+
 
 
 def test_multiple_columns_embedding(mocker, dbsession, csv_file: str):
