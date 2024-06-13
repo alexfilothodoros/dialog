@@ -140,7 +140,6 @@ def test_unknown_model_return_error_on_chat_completion(client_with_settings_over
     assert response.status_code == 404
 
 
-# Test for get_memory_instance
 @patch('dialog.llm.agents.lcel.get_session')
 @patch('dialog.llm.agents.lcel.generate_memory_instance')
 def test_get_memory_instance(mock_generate_memory_instance, mock_get_session):
@@ -148,11 +147,9 @@ def test_get_memory_instance(mock_generate_memory_instance, mock_get_session):
     lcel.get_memory_instance('test_session')
     mock_generate_memory_instance.assert_called_once()
 
-# Test for retriever
 def test_retriever():
     assert isinstance(lcel.retriever, DialogRetriever)
 
-# Test for format_docs
 def test_format_docs():
     docs = [Document(page_content='doc1'), Document(page_content='doc2')]
     result = lcel.format_docs(docs)
@@ -185,7 +182,6 @@ def psql_memory():
 
 
 async def test_gen():
-    #import gen from dialog/src/dialog/routers/openai and test it
     from src.dialog.routers.openai import ask_question_to_llm
 
     _g = ask_question_to_llm(message="Hello")
