@@ -46,3 +46,38 @@ def test_get_llm_class_with_invalid_class():
     os.environ["LLM_CLASS"] = "dialog.llm.invalid_llm.InvalidLLM"
     with pytest.raises(ModuleNotFoundError):
         llm_class = get_llm_class()
+    
+def test_dialog_llm_for_invalid_config():
+    with pytest.raises(ValueError):
+        DialogLLM(1)
+    
+def test_dialog_llm_with_valid_config():
+    config = {
+        "temperature": 0.5,
+        "max_tokens": 100
+    }
+    llm = DialogLLM(config)
+
+    assert llm.config == config
+    assert llm.prompt is None
+    assert llm.session_id is None
+    assert llm.relevant_contents is None
+    assert llm.dataset is None
+    assert llm.llm_api_key is None
+    assert llm.parent_session_id is None
+
+
+def test_abstract_llm_with_empty_config():
+    config = {}
+    llm = AbstractLLM(config)
+    assert llm.config == config
+    assert llm.prompt is None
+    assert llm.session_id is None
+    assert llm.relevant_contents is None
+    assert llm.dataset is None
+    assert llm.llm_api_key is None
+    assert llm.parent_session_id is None
+
+    assert llm.preprocess("input") == "input"
+    assert llm.generate_prompt("text") == "text"
+        
