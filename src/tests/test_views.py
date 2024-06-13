@@ -140,27 +140,36 @@ def test_unknown_model_return_error_on_chat_completion(client_with_settings_over
     assert response.status_code == 404
 
 
+# Test for get_memory_instance
 @patch('dialog.llm.agents.lcel.get_session')
 @patch('dialog.llm.agents.lcel.generate_memory_instance')
 def test_get_memory_instance(mock_generate_memory_instance, mock_get_session):
     mock_get_session.return_value = iter([MagicMock()])
     lcel.get_memory_instance('test_session')
     mock_generate_memory_instance.assert_called_once()
+    assert mock_generate_memory_instance.call_args[1]['session_id'] == 'test_session'
+    
 
+# Test for retriever
 def test_retriever():
     assert isinstance(lcel.retriever, DialogRetriever)
+    assert lcel.retriever.session is not None
+    assert lcel.retriever.embedding_llm is not None
 
+
+# Test for format_docs
 def test_format_docs():
     docs = [Document(page_content='doc1'), Document(page_content='doc2')]
     result = lcel.format_docs(docs)
     assert result == 'doc1\n\ndoc2'
+    assert isinstance(result, str)
 
 
+# Test for runnable
 def test_runnable():
     assert isinstance(lcel.runnable, RunnableWithMessageHistory)
     assert lcel.runnable.input_messages_key == 'input'
     assert lcel.runnable.history_messages_key == 'chat_history'
-
 
 
 @pytest.fixture
@@ -169,7 +178,6 @@ def psql_memory():
     from unittest.mock import Mock
     from dialog.learn.helpers import stopwords
 
-    # Create a mock psql_memory object
     psql_memory = Mock()
     psql_memory.messages = [
         Mock(content="This is message 1"),
@@ -179,10 +187,11 @@ def psql_memory():
     return psql_memory
 
 
-
-
 async def test_gen():
     from src.dialog.routers.openai import ask_question_to_llm
+    from unittest.mock import MagicMock
+    from dialog.learn.helpers import stopwords
+    from dialog.learn.idf import categorize_conversation_history
 
     _g = ask_question_to_llm(message="Hello")
     expected_output = [
