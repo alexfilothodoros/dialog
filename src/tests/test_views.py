@@ -2,6 +2,17 @@ import os
 import pytest
 
 from dialog_lib.db.models import ChatMessages, Chat
+import asyncio
+import pytest
+from unittest.mock import MagicMock, patch
+from dialog.llm.agents import lcel
+from langchain_core.runnables import RunnablePassthrough
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_openai.chat_models import ChatOpenAI
+from dialog_lib.embeddings.retrievers import DialogRetriever
+from langchain_core.runnables.history import RunnableWithMessageHistory
+from langchain_core.documents import Document
+
 
 def test_health(client):
     response = client.get("/health")
@@ -57,6 +68,7 @@ def test_customized_openai_models_response(client):
     assert response.status_code == 200
     for i in ["id", "object", "created", "owned_by"]:
         assert i in response.json()[0]
+
 
 def test_customized_openai_chat_completion_response_stream_false(client, llm_mock_openai_router):
     os.environ["LLM_CLASS"] = "dialog.llm.agents.default.DialogLLM"
@@ -126,3 +138,60 @@ def test_unknown_model_return_error_on_chat_completion(client_with_settings_over
         }
     )
     assert response.status_code == 404
+
+
+# Test for get_memory_instance
+@patch('dialog.llm.agents.lcel.get_session')
+@patch('dialog.llm.agents.lcel.generate_memory_instance')
+def test_get_memory_instance(mock_generate_memory_instance, mock_get_session):
+    mock_get_session.return_value = iter([MagicMock()])
+    lcel.get_memory_instance('test_session')
+    mock_generate_memory_instance.assert_called_once()
+
+# Test for retriever
+def test_retriever():
+    assert isinstance(lcel.retriever, DialogRetriever)
+
+# Test for format_docs
+def test_format_docs():
+    docs = [Document(page_content='doc1'), Document(page_content='doc2')]
+    result = lcel.format_docs(docs)
+    assert result == 'doc1\n\ndoc2'
+
+
+def test_runnable():
+    assert isinstance(lcel.runnable, RunnableWithMessageHistory)
+    assert lcel.runnable.input_messages_key == 'input'
+    assert lcel.runnable.history_messages_key == 'chat_history'
+
+
+
+@pytest.fixture
+def psql_memory():
+    import pytest
+    from unittest.mock import Mock
+    from dialog.learn.helpers import stopwords
+
+    # Create a mock psql_memory object
+    psql_memory = Mock()
+    psql_memory.messages = [
+        Mock(content="This is message 1"),
+        Mock(content="This is message 2"),
+        Mock(content="This is message 3"),
+    ]
+    return psql_memory
+
+
+
+
+async def test_gen():
+    #import gen from dialog/src/dialog/routers/openai and test it
+    from src.dialog.routers.openai import ask_question_to_llm
+
+    _g = ask_question_to_llm(message="Hello")
+    expected_output = [
+        'data: {"id": "talkdai-<random_uuid>", "choices": [{"index": 0, "delta": {"content": "word "}}]}\n\n',
+        'data: {"id": "talkdai-<random_uuid>", "choices": [{"index": 0, "delta": {"content": "+END "}}]}\n\n'
+    ]
+    output = list(_g.gen())
+    assert output == expected_output
